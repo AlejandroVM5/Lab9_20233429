@@ -3,7 +3,9 @@ package com.example.lab9_20233429.controller;
 import com.example.lab9_20233429.entity.StfPuzzleSv;
 import com.example.lab9_20233429.repository.StfPuzzleSvRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
+import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +38,35 @@ public class PuzzleRestController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> guardarOActualizarEstado(@RequestBody StfPuzzleSv datos) {
+        Map<String, Object> response = new HashMap<>();
+        //En caso el movimiento que hagamos solo se envia la nueva estructura conservamos la imagen previa
+        String imagenActual  =datos.getImage();
+        if(imagenActual==null || imagenActual.isEmpty()){
+            List<StfPuzzleSv> existentes = repository.findAll();
+            if (!existentes.isEmpty()) {
+                imagenActual = existentes.get(0).getImage();
+            }
+        }
 
 
+        //Como el board structure es primario y en la tabla solo debe hacer una fila eliminamos la anterior y ponemos la
+        //actualizada
+        repository.deleteAll();
+        StfPuzzleSv nuevoEstado = new StfPuzzleSv(datos.getStfGameBoardStructure(), imagenActual);
+        repository.save(nuevoEstado);
+        response.put("result", "Success");
+        response.put("stfGameBoardStructure", nuevoEstado.getStfGameBoardStructure());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Map<String, Object>> reiniciarJuego() {
+        repository.deleteAll();
+        Map<String, Object> response = new HashMap<>();
+        response.put("result", "reset");
+        return ResponseEntity.ok(response);
+    }
+    
 }
