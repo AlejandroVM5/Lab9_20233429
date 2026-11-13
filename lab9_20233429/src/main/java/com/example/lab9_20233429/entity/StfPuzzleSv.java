@@ -7,31 +7,29 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "stf_puzzle_sv")
-
 public class StfPuzzleSv {
 
     @Id
-    @Column(name = "stf_games_board_structure", nullable = false, length = 255)
-    private String stf_games_board_structure;
+    @Column(name = "stf_game_board_structure", nullable = false, length = 255)
+    private String stfGameBoardStructure;
 
-    @Column(name = "image",columnDefinition = "LongText")
+    @Column(name = "image", columnDefinition = "LONGTEXT")
     private String image;
 
     public StfPuzzleSv() {
-
     }
 
-    public StfPuzzleSv(String stf_games_board_structure, String image) {
-        this.stf_games_board_structure = stf_games_board_structure;
+    public StfPuzzleSv(String stfGameBoardStructure, String image) {
+        this.stfGameBoardStructure = stfGameBoardStructure;
         this.image = image;
     }
 
-    public String getStf_games_board_structure() {
-        return stf_games_board_structure;
+    public String getStfGameBoardStructure() {
+        return stfGameBoardStructure;
     }
 
-    public void setStf_games_board_structure(String stf_games_board_structure) {
-        this.stf_games_board_structure = stf_games_board_structure;
+    public void setStfGameBoardStructure(String stfGameBoardStructure) {
+        this.stfGameBoardStructure = stfGameBoardStructure;
     }
 
     public String getImage() {
