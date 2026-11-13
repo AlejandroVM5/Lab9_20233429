@@ -1,0 +1,23 @@
+SOLUCIÓN DEL ROMPECABEZAS (STF-PUZZLE SIMPLIFIED VERSION)
+=========================================================
+
+El tablero se desordena automáticamente a partir de la imagen ordenada aplicando una secuencia
+de 8 movimientos válidos hacia atrás del espacio vacío ('X'):
+1. Arriba
+2. Arriba
+3. Izquierda
+4. Abajo
+5. Izquierda
+6. Arriba
+7. Derecha
+8. Abajo
+
+Por lo tanto, para resolver cualquier tablero (ej: 3x3) en exactamente 8 pasos desde el estado inicial:
+- Paso 1: Dar clic a la casilla ubicada ARRIBA del espacio vacío.
+- Paso 2: Dar clic a la casilla ubicada a la IZQUIERDA del espacio vacío.
+- Paso 3: Dar clic a la casilla ubicada ABAJO del espacio vacío.
+- Paso 4: Dar clic a la casilla ubicada a la DERECHA del espacio vacío.
+- Paso 5: Dar clic a la casilla ubicada ARRIBA del espacio vacío.
+- Paso 6: Dar clic a la casilla ubicada a la DERECHA del espacio vacío.
+- Paso 7: Dar clic a la casilla ubicada ABAJO del espacio vacío.
+- Paso 8: Dar clic a la casilla ubicada ABAJO del espacio vacío -> "¡Juego terminado !"

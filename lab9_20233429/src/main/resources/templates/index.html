@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Stf-Puzzle Simplified Version</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .setup-box {
+            border: 3px solid #222;
+            padding: 15px;
+            width: 300px;
+            margin: 0 auto;
+            background-color: #fff;
+        }
+        .preview-img {
+            width: 140px;
+            height: 140px;
+            object-fit: cover;
+            border: 1px solid #ccc;
+            display: block;
+            margin: 0 auto 12px auto;
+        }
+        .puzzle-board {
+            display: grid;
+            width: 360px;
+            height: 360px;
+            margin: 20px auto 10px auto;
+            border: 3px solid #000;
+            user-select: none;
+        }
+        .puzzle-tile {
+            border: 1px solid #000;
+            cursor: pointer;
+            box-sizing: border-box;
+            background-repeat: no-repeat;
+        }
+        .btn-stf {
+            background-color: #198754;
+            color: white;
+            font-weight: 500;
+            border-radius: 5px;
+            border: none;
+            padding: 8px 18px;
+        }
+        .btn-stf:hover {
+            background-color: #146c43;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-light text-center py-4">
+
+    <h3 class="mb-3">Stf-Puzzle Simplified Version</h3>
+
+    <!-- Panel de Configuracion -->
+    <div class="setup-box shadow-sm">
+        <!-- Imagen por defecto tomada de tu carpeta static/img/Charizard.png -->
+        <img id="previewImg" class="preview-img" src="/img/Charizard.png" alt="Personaje">
+
+        <div class="d-flex gap-2 mb-3">
+            <!-- Selector de color del tablero (blanco por defecto) -->
+            <input type="color" id="boardColor" class="form-control form-control-color" value="#ffffff" title="Color del tablero" style="width: 60px;">
+            <!-- Dimensiones del tablero (ej: 3x3, 4x4, 5x5) -->
+            <input type="text" id="boardDim" class="form-control" placeholder="Ej: 3x3">
+        </div>
+
+        <!-- Input de archivo oculto que se abre al dar clic en "Seleccionar Personaje" -->
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" style="display: none;">
+        <button type="button" id="btnSelectImg" class="btn-stf w-100">Seleccionar Personaje</button>
+    </div>
+
+    <!-- Boton Iniciar el juego (solo aparece cuando el formato NxN es valido) -->
+    <div class="mt-3">
+        <button type="button" id="btnStart" class="btn-stf" style="display: none;">Iniciar el juego</button>
+    </div>
+
+    <!-- Tablero del Rompecabezas (Sin etiquetas canvas, usando divs y CSS background-position) -->
+    <div id="boardContainer" style="display: none;">
+        <div id="puzzleBoard" class="puzzle-board"></div>
+        <h4 id="winMessage" class="fw-bold mt-2" style="display: none;">Juego terminado !</h4>
+    </div>
+
+    <!-- JQuery para llamadas AJAX a los Web Services REST -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        // Imagen por defecto de tu carpeta static/img
+        let currentImage = "/img/Charizard.png";
+        let N = 3;
+        let board = [];
+        let gameActive = false;
+
+        $(document).ready(function () {
+            // 1. Al abrir la web, consultamos el Web Service GET /api/puzzle para retomar si habia partida
+            $.ajax({
+                url: "/api/puzzle",
+                method: "GET",
+                success: function (res) {
+                    if (res.active && res.stfGameBoardStructure) {
+                        if (res.image) {
+                            currentImage = res.image;
+                            $("#previewImg").attr("src", currentImage);
+                        }
+                        board = parseStructureToBoard(res.stfGameBoardStructure);
+                        N = Math.round(Math.sqrt(board.length));
+                        $("#boardDim").val(N + "x" + N);
+                        $("#btnStart").show();
+                        gameActive = true;
+                        $("#boardContainer").show();
+                        renderBoard();
+                    }
+                }
+            });
+
+            // 2. Boton "Seleccionar Personaje" -> abre el explorador de archivos
+            $("#btnSelectImg").click(function () {
+                $("#fileInput").click();
+            });
+
+            $("#fileInput").change(function (e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const fileName = file.name.toLowerCase();
+                if (!fileName.endsWith(".jpg") && !fileName.endsWith(".jpeg") && !fileName.endsWith(".png")) {
+                    alert("Solo se permite subir una imagen en formato válido (.jpg o .png)");
+                    $(this).val("");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (evt) {
+                    currentImage = evt.target.result;
+                    $("#previewImg").attr("src", currentImage);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // 3. Validar formato de dimensiones NxN (3x3, 4x4, 5x5, etc.)
+            $("#boardDim").on("input", function () {
+                const val = $(this).val().trim();
+                const match = val.match(/^([3-9])x([3-9])$/i);
+                if (match && match[1] === match[2]) {
+                    $("#btnStart").show();
+                } else {
+                    $("#btnStart").hide();
+                }
+            });
+
+            $("#boardColor").on("input", function () {
+                if (gameActive) {
+                    renderBoard();
+                }
+            });
+
+            // 4. Al hacer clic en "Iniciar el juego"
+            $("#btnStart").click(function () {
+                const val = $("#boardDim").val().trim();
+                const match = val.match(/^([3-9])x([3-9])$/i);
+                if (!match || match[1] !== match[2]) return;
+
+                N = parseInt(match[1]);
+                $("#winMessage").hide();
+
+                board = [];
+                for (let i = 1; i < N * N; i++) {
+                    board.push(String(i));
+                }
+                board.push("X");
+
+                desordenar8Pasos();
+
+                gameActive = true;
+                $("#boardContainer").show();
+                renderBoard();
+
+                guardarEstadoEnBD(true);
+            });
+        });
+
+        function desordenar8Pasos() {
+            const deltas = [
+                [-1, 0], // Paso 1: Arriba
+                [-1, 0], // Paso 2: Arriba
+                [0, -1], // Paso 3: Izquierda
+                [1, 0],  // Paso 4: Abajo
+                [0, -1], // Paso 5: Izquierda
+                [-1, 0], // Paso 6: Arriba
+                [0, 1],  // Paso 7: Derecha
+                [1, 0]   // Paso 8: Abajo
+            ];
+
+            let emptyIdx = board.indexOf("X");
+            let r = Math.floor(emptyIdx / N);
+            let c = emptyIdx % N;
+
+            for (let i = 0; i < deltas.length; i++) {
+                let nr = r + deltas[i][0];
+                let nc = c + deltas[i][1];
+                if (nr >= 0 && nr < N && nc >= 0 && nc < N) {
+                    let targetIdx = nr * N + nc;
+                    let temp = board[emptyIdx];
+                    board[emptyIdx] = board[targetIdx];
+                    board[targetIdx] = temp;
+                    emptyIdx = targetIdx;
+                    r = nr;
+                    c = nc;
+                }
+            }
+        }
+
+        function renderBoard() {
+            const $board = $("#puzzleBoard");
+            $board.empty();
+            $board.css({
+                "grid-template-columns": `repeat(${N}, 1fr)`,
+                "grid-template-rows": `repeat(${N}, 1fr)`,
+                "background-color": $("#boardColor").val()
+            });
+
+            const boardSizePx = 360;
+            const tileSizePx = boardSizePx / N;
+
+            for (let i = 0; i < board.length; i++) {
+                const val = board[i];
+                const $tile = $("<div></div>").addClass("puzzle-tile");
+
+                if (val === "X") {
+                    $tile.css("background-color", $("#boardColor").val());
+                } else {
+                    const origIndex = parseInt(val) - 1;
+                    const origRow = Math.floor(origIndex / N);
+                    const origCol = origIndex % N;
+
+                    const posX = -(origCol * tileSizePx);
+                    const posY = -(origRow * tileSizePx);
+
+                    $tile.css({
+                        "background-image": `url('${currentImage}')`,
+                        "background-size": `${boardSizePx}px ${boardSizePx}px`,
+                        "background-position": `${posX}px ${posY}px`
+                    });
+                }
+
+                $tile.click(function () {
+                    intentarMoverCasilla(i);
+                });
+
+                $board.append($tile);
+            }
+        }
+
+        function intentarMoverCasilla(clickedIdx) {
+            if (!gameActive) return;
+
+            const emptyIdx = board.indexOf("X");
+            const r1 = Math.floor(clickedIdx / N);
+            const c1 = clickedIdx % N;
+            const r2 = Math.floor(emptyIdx / N);
+            const c2 = emptyIdx % N;
+
+            const esContigua = (Math.abs(r1 - r2) + Math.abs(c1 - c2)) === 1;
+            if (!esContigua) {
+                return;
+            }
+
+            const temp = board[emptyIdx];
+            board[emptyIdx] = board[clickedIdx];
+            board[clickedIdx] = temp;
+
+            renderBoard();
+
+            if (verificarVictoria()) {
+                gameActive = false;
+                $("#winMessage").show();
+
+                setTimeout(function () {
+                    $.ajax({
+                        url: "/api/puzzle",
+                        method: "DELETE",
+                        success: function () {
+                            alert("Juego terminado ! Se iniciará un nuevo juego.");
+                            $("#boardContainer").hide();
+                            $("#winMessage").hide();
+                            $("#boardDim").val("");
+                            $("#btnStart").hide();
+                        }
+                    });
+                }, 400);
+            } else {
+                guardarEstadoEnBD(false);
+            }
+        }
+
+        function verificarVictoria() {
+            for (let i = 0; i < N * N - 1; i++) {
+                if (board[i] !== String(i + 1)) {
+                    return false;
+                }
+            }
+            return board[N * N - 1] === "X";
+        }
+
+        function boardToStructureString() {
+            return N <= 3 ? board.join("") : board.join("-");
+        }
+
+        function parseStructureToBoard(str) {
+            if (str.includes("-")) {
+                return str.split("-");
+            }
+            return str.split("");
+        }
+
+        function guardarEstadoEnBD(incluirImagen) {
+            const payload = {
+                stfGameBoardStructure: boardToStructureString(),
+                image: incluirImagen ? currentImage : null
+            };
+            $.ajax({
+                url: "/api/puzzle",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(payload)
+            });
+        }
+    </script>
+</body>
+</html>

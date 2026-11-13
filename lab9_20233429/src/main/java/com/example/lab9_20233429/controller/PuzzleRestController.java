@@ -68,5 +68,5 @@ public class PuzzleRestController {
         response.put("result", "reset");
         return ResponseEntity.ok(response);
     }
-    
+
 }
